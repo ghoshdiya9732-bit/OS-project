@@ -28,6 +28,46 @@ body {
   font-family: 'Courier New', monospace;
   background: var(--cyber-bg);
   color: var(--cyber-primary);
+  /* Accessibility: Ensure minimum font size for readability */
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Accessibility: Focus styles for keyboard navigation */
+button:focus,
+input:focus,
+select:focus,
+textarea:focus,
+a:focus {
+  outline: 2px solid var(--cyber-primary);
+  outline-offset: 2px;
+}
+
+/* Accessibility: Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Accessibility: High contrast mode support */
+@media (prefers-contrast: more) {
+  :root {
+    --cyber-primary: #00ffff;
+    --cyber-secondary: #ff00ff;
+  }
+  
+  button {
+    border-width: 2px;
+  }
+}
   overflow-x: hidden;
 }
 
