@@ -22,6 +22,8 @@ function App() {
   const [currentStep, setCurrentStep] = useState(0);
   const [typingMode, setTypingMode] = useState('tutor'); // 'tutor' or 'game'
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isDarkMode) {
@@ -32,17 +34,38 @@ function App() {
   }, [isDarkMode]);
 
   const runSimulation = () => {
-    if (processes.length === 0) return;
-    
-    const algorithm = schedulingAlgorithms[selectedAlgorithm];
-    const result = algorithm(processes, timeQuantum);
-    
-    setGanttData(result.ganttChart);
-    setPerformanceData(result.metrics);
-    
-    if (stepMode) {
-      setIsAnimating(true);
-      animateSteps(result.ganttChart);
+    try {
+      setLoading(true);
+      setError(null);
+      
+      if (processes.length === 0) {
+        setError('Please add at least one process before running simulation');
+        setLoading(false);
+        return;
+      }
+      
+      const algorithm = schedulingAlgorithms[selectedAlgorithm];
+      if (!algorithm) {
+        throw new Error('Invalid algorithm selected');
+      }
+      
+      const result = algorithm(processes, timeQuantum);
+      
+      if (!result || !result.ganttChart || !result.metrics) {
+        throw new Error('Algorithm returned invalid result');
+      }
+      
+      setGanttData(result.ganttChart);
+      setPerformanceData(result.metrics);
+      
+      if (stepMode) {
+        setIsAnimating(true);
+        animateSteps(result.ganttChart);
+      }
+      setLoading(false);
+    } catch (err) {
+      setError(err.message || 'An error occurred during simulation');
+      setLoading(false);
     }
   };
 
@@ -60,23 +83,34 @@ function App() {
   };
 
   const exportResults = () => {
-    const results = {
-      algorithm: selectedAlgorithm,
-      timeQuantum: selectedAlgorithm === 'roundRobin' ? timeQuantum : null,
-      processes: processes,
-      ganttChart: ganttData,
-      performanceMetrics: performanceData
-    };
-    
-    const dataStr = JSON.stringify(results, null, 2);
-    const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-    
-    const exportFileDefaultName = `cpu-scheduling-results-${Date.now()}.json`;
-    
-    const linkElement = document.createElement('a');
-    linkElement.setAttribute('href', dataUri);
-    linkElement.setAttribute('download', exportFileDefaultName);
-    linkElement.click();
+    try {
+      if (!performanceData || ganttData.length === 0) {
+        setError('No simulation results to export');
+        return;
+      }
+      
+      const results = {
+        algorithm: selectedAlgorithm,
+        timeQuantum: selectedAlgorithm === 'roundRobin' ? timeQuantum : null,
+        processes: processes,
+        ganttChart: ganttData,
+        performanceMetrics: performanceData
+      };
+      
+      const dataStr = JSON.stringify(results, null, 2);
+      const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+      
+      const exportFileDefaultName = `cpu-scheduling-results-${Date.now()}.json`;
+      
+      const linkElement = document.createElement('a');
+      linkElement.setAttribute('href', dataUri);
+      linkElement.setAttribute('download', exportFileDefaultName);
+      linkElement.click();
+      
+      setError(null);
+    } catch (err) {
+      setError('Failed to export results: ' + err.message);
+    }
   };
 
   const renderMobileView = () => (
@@ -106,6 +140,17 @@ function App() {
         </header>
 
         <main className="p-4 space-y-4">
+          {error && (
+            <div className="bg-red-100 dark:bg-red-900 border border-red-400 dark:border-red-700 text-red-700 dark:text-red-100 px-4 py-3 rounded relative">
+              <span className="block sm:inline">{error}</span>
+              <button
+                onClick={() => setError(null)}
+                className="absolute top-0 bottom-0 right-0 px-4 py-3"
+              >
+                ×
+              </button>
+            </div>
+          )}
           {currentView === 'home' && (
             <>
               <div className="basic-card p-4 dark:bg-gray-800 dark:border-gray-700">
